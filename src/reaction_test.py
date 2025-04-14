@@ -104,7 +104,7 @@ class ReactionGame(PySide6.QtWidgets.QMainWindow):
         # Initialize parent QMainWindow class - required for Qt functionality
         super().__init__() 
         # Set window icon and properties
-        self.setWindowTitle('Reaction Speed Test')
+        self.setWindowTitle('ReactionTest')
         
         # Credit: Icon image created by OpenAI's GPT-4o
         # Use resource_path to find the icon
