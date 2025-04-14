@@ -14,5 +14,8 @@ squashfs-root/
 app_icon_256.png
 out/
 
+# Memory Bank
+memory-bank/
+
 # OS-specific
 .DS_Store 
