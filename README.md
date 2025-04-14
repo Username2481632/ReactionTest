@@ -31,6 +31,11 @@ A simple application built with Python and PySide6 to test user reaction times.
     pip install -r requirements-dev.txt
     ```
 
+5.  **(Optional) Setup pre-commit hooks (for automatic AppImage build on commit):**
+    ```bash
+    pre-commit install
+    ```
+
 ## How to Run
 
 1.  Ensure your virtual environment is activated.
@@ -42,8 +47,9 @@ A simple application built with Python and PySide6 to test user reaction times.
 ## How to Build (AppImage for Linux)
 
 1.  Ensure development dependencies are installed (see Setup step 4).
-2.  The AppImage is built automatically via a pre-commit hook whenever you commit changes.
-3.  The built AppImage can be found in the `out/` directory.
+2.  Ensure pre-commit hooks are installed (see Setup step 5).
+3.  The AppImage is built automatically via the pre-commit hook whenever you commit changes.
+4.  The built AppImage can be found in the `out/` directory.
 
 ## Features (To be updated)
 
