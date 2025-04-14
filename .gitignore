@@ -1,0 +1,18 @@
+# Python cache
+__pycache__/
+*.pyc
+
+# Virtual Environment
+venv/
+
+# Build Artifacts (PyInstaller & AppImage)
+build/
+dist/
+*.spec
+*.AppImage
+squashfs-root/
+app_icon_256.png
+out/
+
+# OS-specific
+.DS_Store 
