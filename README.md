@@ -52,9 +52,16 @@ A simple application built with Python and PySide6 to test user reaction times.
 3.  The AppImage is built automatically via the pre-commit hook whenever you commit changes.
 4.  The built AppImage can be found in the `out/` directory.
 
-## Features (To be updated)
+## Features
 
-- [ ] (Add specific features of the ReactionTest app here)
+- Measures reaction time to a visual cue (color change).
+- Displays reaction time in seconds (e.g., 0.XXX s).
+- Tracks and displays the user's best reaction time.
+- Provides visual feedback for pressing too early.
+- Uses the SPACE bar for interaction.
+- Features a visually responsive interface that adapts to window size.
+- Includes animations for feedback (error shake, best time trophy).
+- Simple gameplay loop: Press SPACE to start/retry.
 
 ## License
 
