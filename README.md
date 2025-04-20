@@ -1,4 +1,4 @@
-# ReactionTest
+# ReactionTimer
 
 A simple application built with Python and PySide6 to test user reaction times.
 
@@ -11,8 +11,9 @@ A simple application built with Python and PySide6 to test user reaction times.
 
 1.  **Clone the repository (if you haven't already):**
     ```bash
-    git clone https://github.com/Username2481632/ReactionTest.git
-    cd ReactionTest
+    git clone https://github.com/Username2481632/ReactionTimer.git
+    cd ReactionTimer
+    python -m venv venv
     ```
 
 2.  **Create and activate a virtual environment:**

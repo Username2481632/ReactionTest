@@ -4,9 +4,9 @@
 set -e
 
 # --- Configuration ---
-APP_NAME="ReactionTest"
+APP_NAME="ReactionTimer"
 # Paths relative to project root
-SCRIPT_NAME="src/reaction_test.py"
+SCRIPT_NAME="src/reaction_timer.py"
 ICON_NAME="assets/app_icon.png"
 TROPHY_NAME="assets/trophy.svg"
 ICON_NAME_RESIZED="app_icon_256.png" # Temporary resized icon in root
