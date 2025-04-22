@@ -2,7 +2,7 @@ repos:
 -   repo: local
     hooks:
     -   id: build-appimage
-        name: Build AppImage
+        name: Build AppImage/EXE (Linux/Windows)
         entry: scripts/build_appimage.sh
         language: script
         always_run: true
