@@ -62,12 +62,8 @@ jobs:
       shell: bash # Use bash for consistency with pip commands
 
     - name: Install ImageMagick via Chocolatey (for icon conversion)
-      run: choco install imagemagick.app --no-progress --version=7.1.0.26 # Pin version for stability
+      run: choco install imagemagick.app --no-progress # Remove version pinning
       shell: pwsh # Use PowerShell for choco
-
-    - name: Add ImageMagick to PATH
-      run: echo "C:\Program Files\ImageMagick-7.1.0-Q16-HDRI\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-      shell: pwsh
 
     - name: Build EXE
       run: ./scripts/build_appimage.sh # Script detects OS and runs build_windows()
