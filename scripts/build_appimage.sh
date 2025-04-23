@@ -159,11 +159,18 @@ build_windows() {
         # Use explicit relative paths ./ for Windows compatibility
         echo "Running: magick convert \"${ICON_NAME_PNG}\" -define icon:auto-resize=256,128,64,48,32,16 \"${TEMP_ICO_PATH}\""
         if magick convert "${ICON_NAME_PNG}" -define icon:auto-resize=256,128,64,48,32,16 "${TEMP_ICO_PATH}"; then
-            echo "ICO file created successfully at ${TEMP_ICO_PATH}"
-            ICON_ARG="--icon=\"${TEMP_ICO_PATH}\"" # Use the generated ICO path
+            # Explicitly check if the file was created
+            if [ -f "${TEMP_ICO_PATH}" ]; then
+                echo "ICO file created successfully at ${TEMP_ICO_PATH}"
+                ICON_ARG="--icon=${TEMP_ICO_PATH}" # Simplified argument without extra quotes
+            else
+                echo "Warning: magick convert seemed to succeed, but '${TEMP_ICO_PATH}' was not found. Building without icon."
+                ICON_ARG=""
+            fi
         else
             echo "Warning: Failed to convert PNG to ICO using magick convert. Building without icon."
             rm -f "${TEMP_ICO_PATH}" # Clean up potentially incomplete ico
+            ICON_ARG=""
         fi
     fi
 
