@@ -1,11 +1,14 @@
 # ReactionTimer
 
+[![Build Status](https://github.com/Username2481632/ReactionTimer/actions/workflows/build.yml/badge.svg)](https://github.com/Username2481632/ReactionTimer/actions/workflows/build.yml)
+
 A simple application built with Python and PySide6 to test user reaction times.
 
 ## Requirements
 
-- Python 3.x (Developed with 3.13)
+- Python 3.12
 - Pip (Python package installer)
+- (Optional) ImageMagick (`convert` command) - For building the Windows `.exe` with an icon locally.
 
 ## Setup and Installation
 
@@ -13,12 +16,12 @@ A simple application built with Python and PySide6 to test user reaction times.
     ```bash
     git clone https://github.com/Username2481632/ReactionTimer.git
     cd ReactionTimer
-    python -m venv venv
     ```
 
-2.  **Create and activate a virtual environment:**
+2.  **Create and activate a Python 3.12 virtual environment:**
     ```bash
-    python -m venv venv
+    # Ensure you have Python 3.12 installed
+    python3.12 -m venv venv
     source venv/bin/activate  # On Windows use `venv\Scripts\activate`
     ```
 
@@ -27,30 +30,44 @@ A simple application built with Python and PySide6 to test user reaction times.
     pip install -r requirements.txt
     ```
 
-4.  **(Optional) Install development dependencies (needed for building/packaging):**
+4.  **(Optional) Install development dependencies (needed for type checking, pre-commit hooks):**
     ```bash
     pip install -r requirements-dev.txt
     ```
 
-5.  **(Optional) Setup pre-commit hooks (for automatic AppImage build on commit):**
+5.  **(Optional) Setup pre-commit hooks (for automatic type checking on commit):**
     ```bash
     pre-commit install
     ```
 
 ## How to Run
 
-1.  Ensure your virtual environment is activated.
+1.  Ensure your Python 3.12 virtual environment is activated.
 2.  Run the main application script:
     ```bash
-    python src/reaction_test.py
+    python src/reaction_timer.py
     ```
 
-## How to Build (AppImage for Linux)
+## Type Checking (pytype)
 
-1.  Ensure development dependencies are installed (see Setup step 4).
-2.  Ensure pre-commit hooks are installed (see Setup step 5).
-3.  The AppImage is built automatically via the pre-commit hook whenever you commit changes.
-4.  The built AppImage can be found in the `out/` directory.
+This project uses `pytype` for static type checking.
+
+- **Automatic:** It runs automatically as a pre-commit hook if installed (Setup step 5).
+- **Manual:** You can run it manually using:
+    ```bash
+    ./scripts/run_pytype.sh
+    ```
+
+## Builds (AppImage & EXE)
+
+Builds for Linux (AppImage) and Windows (.exe) are handled automatically via **GitHub Actions** whenever changes are pushed to the `master` branch.
+
+- **Download:** You can download the latest builds from the [Actions tab](https://github.com/Username2481632/ReactionTimer/actions) of the repository. Look for the "Build Application" workflow and download the artifacts named `ReactionTimer-AppImage` or `ReactionTimer-Windows`.
+- **Local Build (Optional):** If you need to build locally, ensure development dependencies are installed and run the build script:
+    ```bash
+    ./scripts/build_appimage.sh
+    ```
+    *(Note: Building the `.exe` locally requires running this script on Windows. Icon conversion requires ImageMagick.)*
 
 ## Features
 
