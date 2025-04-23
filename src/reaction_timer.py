@@ -117,9 +117,9 @@ class GameState(enum.Enum):
 class ReactionGame(PySide6.QtWidgets.QMainWindow):
     # --- Class Attributes (declared here for type hinting) ---
     state: GameState
-    start_time: Optional[float]
+    start_time: float | None
     timer: PySide6.QtCore.QTimer
-    best_time: Optional[float]
+    best_time: float | None
     trophy_timer: PySide6.QtCore.QTimer
     trophy_animation: PySide6.QtCore.QPropertyAnimation
 
