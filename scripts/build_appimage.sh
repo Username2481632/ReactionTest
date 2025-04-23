@@ -33,22 +33,22 @@ build_linux() {
     ICON_NAME_RESIZED="app_icon_256.png" # Temporary resized icon in root
 
     # Check prerequisites
-    if [ ! -f "$APPIMAGETOOL_PATH" ]; then
+if [ ! -f "$APPIMAGETOOL_PATH" ]; then
         echo "Error: appimagetool not found at $APPIMAGETOOL_PATH" && exit 1
-    fi
-    if ! command -v pyinstaller &> /dev/null; then
+fi
+if ! command -v pyinstaller &> /dev/null; then
         echo "Error: PyInstaller is not installed or not in PATH." && exit 1
-    fi
+fi
     if [ ! -f "$ICON_NAME_PNG" ]; then
         echo "Error: Original icon file '$ICON_NAME_PNG' not found." && exit 1
-    fi
-    if [ ! -f "$TROPHY_NAME" ]; then
+fi
+if [ ! -f "$TROPHY_NAME" ]; then
         echo "Error: '$TROPHY_NAME' not found." && exit 1
-    fi
+fi
 
     # Create .desktop file
-    echo "--- Creating .desktop file ---"
-    cat > "${APP_NAME}.desktop" <<EOF
+echo "--- Creating .desktop file ---"
+cat > "${APP_NAME}.desktop" <<EOF
 [Desktop Entry]
 Type=Application
 Name=${APP_NAME}
@@ -60,50 +60,50 @@ EOF
 
     # Run PyInstaller (onedir for AppImage)
     echo "--- Running PyInstaller (onedir) ---"
-    pyinstaller \
-        --noconfirm \
-        --onedir \
-        --distpath "${OUTPUT_DIR_NAME}" \
-        --workpath build \
-        --windowed \
-        --add-data="${TROPHY_NAME}:assets/" \
+pyinstaller \
+    --noconfirm \
+    --onedir \
+    --distpath "${OUTPUT_DIR_NAME}" \
+    --workpath build \
+    --windowed \
+    --add-data="${TROPHY_NAME}:assets/" \
         --add-data="${ICON_NAME_PNG}:assets/" \
         --icon="${ICON_NAME_PNG}" \
-        --name "${APP_NAME}" \
-        "${SCRIPT_NAME}"
+    --name "${APP_NAME}" \
+    "${SCRIPT_NAME}"
 
     # Resize Icon
-    echo "--- Resizing icon to 256x256 ---"
+echo "--- Resizing icon to 256x256 ---"
     if ! command -v convert &> /dev/null; then
          echo "Warning: 'convert' command (ImageMagick) not found. Cannot resize icon."
     else
         /usr/bin/convert "${ICON_NAME_PNG}" -resize 256x256 "${ICON_NAME_RESIZED}"
-        if [ ! -f "$ICON_NAME_RESIZED" ]; then
+if [ ! -f "$ICON_NAME_RESIZED" ]; then
             echo "Warning: Failed to resize icon using convert."
         fi
-    fi
+fi
 
     # Prepare AppDir Structure
-    echo "--- Preparing AppDir Structure ---"
+echo "--- Preparing AppDir Structure ---"
     APPDIR="${OUTPUT_DIR_NAME}/${APP_NAME}"
     mkdir -p "${APPDIR}/usr/bin" "${APPDIR}/usr/lib" "${APPDIR}/usr/plugins/platforms" "${APPDIR}/usr/plugins/imageformats" "${APPDIR}/usr/plugins/iconengines"
-    rsync -a --remove-source-files "${APPDIR}/" "${APPDIR}/usr/bin/"
+rsync -a --remove-source-files "${APPDIR}/" "${APPDIR}/usr/bin/"
     if [ -f "$ICON_NAME_RESIZED" ]; then
-        cp "${ICON_NAME_RESIZED}" "${APPDIR}/${APP_NAME}.png"
+cp "${ICON_NAME_RESIZED}" "${APPDIR}/${APP_NAME}.png"
     else
         cp "${ICON_NAME_PNG}" "${APPDIR}/${APP_NAME}.png" # Fallback to original
     fi
-    cp "${APP_NAME}.desktop" "${APPDIR}/"
+cp "${APP_NAME}.desktop" "${APPDIR}/"
 
     # Manually Copy Qt Plugins
-    echo "--- Manually copying required Qt plugins ---"
+echo "--- Manually copying required Qt plugins ---"
     cp /usr/lib64/qt6/plugins/platforms/libqxcb.so "${APPDIR}/usr/plugins/platforms/" 2>/dev/null || echo "Warning: Could not copy libqxcb.so plugin."
     cp /usr/lib64/qt6/plugins/imageformats/libqsvg.so "${APPDIR}/usr/plugins/imageformats/" 2>/dev/null || echo "Warning: Could not copy libqsvg.so plugin."
     cp /usr/lib64/qt6/plugins/iconengines/libqsvgicon.so "${APPDIR}/usr/plugins/iconengines/" 2>/dev/null || echo "Warning: Could not copy libqsvgicon.so plugin."
 
     # Create AppRun
-    echo "--- Creating/Updating manual AppRun script ---"
-    cat > "${APPDIR}/AppRun" <<EOF
+echo "--- Creating/Updating manual AppRun script ---"
+cat > "${APPDIR}/AppRun" <<EOF
 #!/bin/sh
 HERE="\$(dirname "\$(readlink -f "\${0}")")"
 export LD_LIBRARY_PATH="\${HERE}/usr/lib:\${LD_LIBRARY_PATH}"
@@ -111,26 +111,26 @@ export PATH="\${HERE}/usr/bin:\${PATH}"
 export QT_PLUGIN_PATH="\${HERE}/usr/plugins"
 exec "\${HERE}/usr/bin/${APP_NAME}" "\$@"
 EOF
-    chmod +x "${APPDIR}/AppRun"
+chmod +x "${APPDIR}/AppRun"
 
     # Run appimagetool
-    echo "--- Running appimagetool to package the AppDir ---"
-    mkdir -p "${FINAL_OUT_DIR}"
-    if [ -d "${APPDIR}" ]; then
-        "${APPIMAGETOOL_PATH}" -n "${APPDIR}"
-    else
+echo "--- Running appimagetool to package the AppDir ---"
+mkdir -p "${FINAL_OUT_DIR}"
+if [ -d "${APPDIR}" ]; then
+    "${APPIMAGETOOL_PATH}" -n "${APPDIR}"
+else
         echo "Error: AppDir ${APPDIR} not found." && exit 1
-    fi
+fi
 
     # Move AppImage
-    APPIMAGE_FILE="${APP_NAME}-x86_64.AppImage"
-    if [ -f "${APPIMAGE_FILE}" ]; then
-         echo "AppImage created in current directory. Moving to ${FINAL_OUT_DIR}/ directory."
-         mv "${APPIMAGE_FILE}" "${FINAL_OUT_DIR}/"
+APPIMAGE_FILE="${APP_NAME}-x86_64.AppImage"
+if [ -f "${APPIMAGE_FILE}" ]; then
+     echo "AppImage created in current directory. Moving to ${FINAL_OUT_DIR}/ directory."
+     mv "${APPIMAGE_FILE}" "${FINAL_OUT_DIR}/"
          echo "AppImage is located at: $(pwd)/${FINAL_OUT_DIR}/${APPIMAGE_FILE}"
-    else
-         echo "Warning: AppImage file ${APPIMAGE_FILE} not found after appimagetool execution."
-    fi
+else
+     echo "Warning: AppImage file ${APPIMAGE_FILE} not found after appimagetool execution."
+fi
 }
 
 # --- Build for Windows (.exe) ---
@@ -156,10 +156,11 @@ build_windows() {
         echo "Warning: 'convert' command (ImageMagick) not found. Cannot create .ico file. Building without icon."
     else
         mkdir -p build # Ensure build directory exists for temp icon
-        echo "Running: convert \"${ICON_NAME_PNG}\" -define icon:auto-resize=256,128,64,48,32,16 \"${TEMP_ICO_PATH}\""
-        if convert "${ICON_NAME_PNG}" -define icon:auto-resize=256,128,64,48,32,16 "${TEMP_ICO_PATH}"; then
+        # Use explicit relative paths ./ for Windows compatibility
+        echo "Running: convert \\"./${ICON_NAME_PNG}\\" -define icon:auto-resize=256,128,64,48,32,16 \\"./${TEMP_ICO_PATH}\\""
+        if convert "./${ICON_NAME_PNG}" -define icon:auto-resize=256,128,64,48,32,16 "./${TEMP_ICO_PATH}"; then
             echo "ICO file created successfully at ${TEMP_ICO_PATH}"
-            ICON_ARG="--icon=\"${TEMP_ICO_PATH}\""
+            ICON_ARG="--icon=\\"./${TEMP_ICO_PATH}\\"" # Also update ICON_ARG if successful
         else
             echo "Warning: Failed to convert PNG to ICO using convert. Building without icon."
             rm -f "${TEMP_ICO_PATH}" # Clean up potentially incomplete ico
