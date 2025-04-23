@@ -27,6 +27,20 @@ jobs:
     - name: Install ImageMagick (for icon resizing)
       run: sudo apt-get update && sudo apt-get install -y imagemagick
 
+    - name: Install Linux Build Dependencies (X11/Qt)
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends \
+          libxcb-icccm4-dev \
+          libxcb-image0-dev \
+          libxcb-keysyms1-dev \
+          libxcb-render-util0-dev \
+          libxcb-shape0-dev \
+          libxcb-xinerama0-dev \
+          libxcb-xkb-dev \
+          libxkbcommon-x11-dev \
+          libxcb-cursor-dev # Added based on specific warnings
+
     - name: Download appimagetool
       run: |
         mkdir -p lib

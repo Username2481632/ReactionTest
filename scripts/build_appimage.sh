@@ -95,11 +95,11 @@ cp "${ICON_NAME_RESIZED}" "${APPDIR}/${APP_NAME}.png"
     fi
 cp "${APP_NAME}.desktop" "${APPDIR}/"
 
-    # Manually Copy Qt Plugins
-echo "--- Manually copying required Qt plugins ---"
-    cp /usr/lib64/qt6/plugins/platforms/libqxcb.so "${APPDIR}/usr/plugins/platforms/" 2>/dev/null || echo "Warning: Could not copy libqxcb.so plugin."
-    cp /usr/lib64/qt6/plugins/imageformats/libqsvg.so "${APPDIR}/usr/plugins/imageformats/" 2>/dev/null || echo "Warning: Could not copy libqsvg.so plugin."
-    cp /usr/lib64/qt6/plugins/iconengines/libqsvgicon.so "${APPDIR}/usr/plugins/iconengines/" 2>/dev/null || echo "Warning: Could not copy libqsvgicon.so plugin."
+    # Manually Copy Qt Plugins - REMOVED: PyInstaller handles this
+    # echo "--- Manually copying required Qt plugins ---"
+    # cp /usr/lib64/qt6/plugins/platforms/libqxcb.so "${APPDIR}/usr/plugins/platforms/" 2>/dev/null || echo "Warning: Could not copy libqxcb.so plugin."
+    # cp /usr/lib64/qt6/plugins/imageformats/libqsvg.so "${APPDIR}/usr/plugins/imageformats/" 2>/dev/null || echo "Warning: Could not copy libqsvg.so plugin."
+    # cp /usr/lib64/qt6/plugins/iconengines/libqsvgicon.so "${APPDIR}/usr/plugins/iconengines/" 2>/dev/null || echo "Warning: Could not copy libqsvgicon.so plugin."
 
     # Create AppRun
 echo "--- Creating/Updating manual AppRun script ---"
