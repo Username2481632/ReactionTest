@@ -157,12 +157,19 @@ build_windows() {
     else
         mkdir -p build # Ensure build directory exists for temp icon
         # Use explicit relative paths ./ for Windows compatibility
+<<<<<<< HEAD
         echo "Running: convert \\"./${ICON_NAME_PNG}\\" -define icon:auto-resize=256,128,64,48,32,16 \\"./${TEMP_ICO_PATH}\\""
         if convert "./${ICON_NAME_PNG}" -define icon:auto-resize=256,128,64,48,32,16 "./${TEMP_ICO_PATH}"; then
             echo "ICO file created successfully at ${TEMP_ICO_PATH}"
             ICON_ARG="--icon=\\"./${TEMP_ICO_PATH}\\"" # Also update ICON_ARG if successful
+=======
+        echo "Running: magick convert \\"${ICON_NAME_PNG}\\" -define icon:auto-resize=256,128,64,48,32,16 \\"${TEMP_ICO_PATH}\\""
+        if magick convert "${ICON_NAME_PNG}" -define icon:auto-resize=256,128,64,48,32,16 "${TEMP_ICO_PATH}"; then
+            echo "ICO file created successfully at ${TEMP_ICO_PATH}"
+            ICON_ARG="--icon=\\"${TEMP_ICO_PATH}\\"" # Use the generated ICO path
+>>>>>>> 2aae22f (Attempt to fix icon conversion for exe build)
         else
-            echo "Warning: Failed to convert PNG to ICO using convert. Building without icon."
+            echo "Warning: Failed to convert PNG to ICO using magick convert. Building without icon."
             rm -f "${TEMP_ICO_PATH}" # Clean up potentially incomplete ico
         fi
     fi
