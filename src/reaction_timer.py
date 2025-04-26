@@ -29,7 +29,6 @@ SPACE_INDICATOR_WIDTH: float = 0.35  # vw
 SPACE_INDICATOR_HEIGHT: float = 0.15  # vh
 SPACE_INDICATOR_BOTTOM_MARGIN: float = 0.08  # vh
 SPACE_RADIUS: int = 10  # px
-MIN_FONT_SIZE: int = 8  # px
 TOP_BAR_HEIGHT: float = 0.10  # vh
 TROPHY_PADDING: float = 0.05  # max(vw, vh)
 
@@ -71,7 +70,7 @@ class Colors:
     GO: PySide6.QtGui.QColor = hsl(120, 200, 125)  # vibrant green
     ERROR: PySide6.QtGui.QColor = hsl(0, 240, 160)  # vibrant red
 
-    # Result fill set to same as GO, but easy to change if desired
+    # Result fill set to same as GO, but easy to change if needed
     RESULT_FILL: PySide6.QtGui.QColor = GO
 
     # Top bar
@@ -84,22 +83,22 @@ class Colors:
 # =============================================================================
 
 
-def resource_path(relative_path: str) -> str:
+def resource_path(resource_name: str) -> str:
     """
     Get absolute path to resource,
     used for ensuring functionality in both dev and PyInstaller use cases
-    (This is for the AppImage build which allows
-    my program to function as a desktop application)
+    (This is for the AppImage/exe build,
+    which allows my program to function as a desktop application)
     """
-    default_base_path: str = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    base_path: str = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
     # _MEIPASS will be defined if the program is running via PyInstaller
-    base_path: str = getattr(sys, '_MEIPASS', default_base_path)
+    base_path = getattr(sys, "_MEIPASS", base_path)
 
-    return os.path.join(base_path, "assets", relative_path)
+    return os.path.join(base_path, "assets", resource_name)
 
 
 class GameState(enum.Enum):
-    """Represents the finite set of game states"""
+    """Represent the finite set of game states using an enum"""
 
     READY = enum.auto()  # Initial state, waiting for player to start
     WAITING = enum.auto()  # Random wait period before GO signal
@@ -116,32 +115,33 @@ class GameState(enum.Enum):
 # Use a class for inheritance from QMainWindow
 class ReactionGame(PySide6.QtWidgets.QMainWindow):
     # --- Class Attributes (declared here for type hinting) ---
-    state: GameState
-    start_time: float | None
-    timer: PySide6.QtCore.QTimer
-    best_time: float | None
-    trophy_timer: PySide6.QtCore.QTimer
-    trophy_animation: PySide6.QtCore.QPropertyAnimation
 
+    # State variables
+    state: GameState
+    start_time: float
+    wait_timer: PySide6.QtCore.QTimer
+    best_time: float
+    reaction_time: float
+    wait_start_time: float
+    random_wait_time: float
+
+    # UI elements
     instruction_box: PySide6.QtWidgets.QLabel
     space_indicator: PySide6.QtWidgets.QLabel
     top_bar: PySide6.QtWidgets.QWidget
     best_time_label: PySide6.QtWidgets.QLabel
     trophy: PySide6.QtSvgWidgets.QSvgWidget
-    trophy_opacity_effect: PySide6.QtWidgets.QGraphicsOpacityEffect
     trophy_animation_group: None | PySide6.QtCore.QSequentialAnimationGroup
 
     def __init__(self):
         # Initialize parent QMainWindow class - required for Qt functionality
         super().__init__()
+
         # Set window icon and properties
         self.setWindowTitle("ReactionTimer")
-        self.setGeometry(100, 100, 400, 300)
 
         # Credit: Icon image created by OpenAI's GPT-4o
-        app_icon_path: str = resource_path("app_icon.png")
-        app_icon: PySide6.QtGui.QIcon = PySide6.QtGui.QIcon(app_icon_path)
-        self.setWindowIcon(app_icon)
+        self.setWindowIcon(PySide6.QtGui.QIcon(resource_path("app_icon.png")))
 
         font: PySide6.QtGui.QFont = PySide6.QtGui.QFont()
         font.setFamily("Arial")
@@ -149,28 +149,95 @@ class ReactionGame(PySide6.QtWidgets.QMainWindow):
         self.initGame()
         self.initUI()
 
-    def _update_font_size(self, label_widget: PySide6.QtWidgets.QLabel) -> None:
-        """Recalculates and sets the font size for a label based on its current text and size."""
-        width: int = label_widget.width()
-        height: int = label_widget.height()
+    def _update_font_size(
+        self, *labels: PySide6.QtWidgets.QLabel, min_spacing: float = 0.0
+    ) -> None:
+        """
+        Recalculate and set the font size for provided labels,
+        based on current text and available space.
+        """
 
-        font: PySide6.QtGui.QFont = label_widget.font()
-        font_size: int = MIN_FONT_SIZE
-        # Calculate font size
+        # Safety check
+        if not labels:
+            return
+
+        # Figure out the maximum width and height for the labels
+        if labels[0].minimumWidth() == labels[0].maximumWidth():
+            # The label has a fixed width, use that
+            max_width = (
+                labels[0].width()
+                - labels[0].contentsMargins().left()
+                - labels[0].contentsMargins().right()
+            )
+        else:
+            # The label has a variable width, use parent
+            parent: PySide6.QtWidgets.QWidget = labels[0].parentWidget()
+            max_width = (
+                parent.width()
+                - parent.layout().contentsMargins().left()
+                - parent.layout().contentsMargins().right()
+            )
+        if labels[0].minimumHeight() == labels[0].maximumHeight():
+            max_height = (
+                labels[0].height()
+                - labels[0].contentsMargins().top()
+                - labels[0].contentsMargins().bottom()
+            )
+        else:
+            parent: PySide6.QtWidgets.QWidget = labels[0].parentWidget()
+            max_height = (
+                parent.height()
+                - parent.layout().contentsMargins().top()
+                - parent.layout().contentsMargins().bottom()
+            )
+
+        is_horizontal: bool = isinstance(
+            labels[0].parentWidget().layout(), PySide6.QtWidgets.QHBoxLayout
+        )
+
+        font_size: int = 0
         while True:
-            font.setPointSize(font_size + 1)
+            total_width: int = 0
+            total_height: int = 0
+            for label in labels:
+                font = label.font()
+                font.setPointSize(font_size + 1)
+                metrics: PySide6.QtGui.QFontMetrics = PySide6.QtGui.QFontMetrics(font)
 
-            metrics: PySide6.QtGui.QFontMetrics = PySide6.QtGui.QFontMetrics(font)
-            text_width: int = metrics.horizontalAdvance(label_widget.text())
-            text_height: int = metrics.height()
+                # Calculate the rectangle that this font size would occupy
+                # Respect the input label's alignment and word wrap settings
+                text_rect: PySide6.QtCore.QRect = metrics.boundingRect(
+                    PySide6.QtCore.QRect(0, 0, max_width, max_height),
+                    (
+                        PySide6.QtCore.Qt.TextFlag.TextWordWrap
+                        if label.wordWrap()
+                        else 0
+                    ),
+                    label.text(),
+                )
+                total_width += text_rect.width()
+                total_height = max(total_height, text_rect.height())
+                if is_horizontal:
+                    total_width += int(max_width * min_spacing)
+                else:
+                    total_height += int(max_height * min_spacing)
+            else:
+                # Subtract last added spacing
+                if is_horizontal:
+                    total_width -= int(max_width * min_spacing)
+                else:
+                    total_height -= int(max_height * min_spacing)
 
-            # Calculate font size based on both dimensions to ensure it's readable
             # 0.9 gives slight breathing room
-            if text_width > width * 0.9 or text_height > height * 0.9:
+            if total_width > max_width * 0.9 or total_height > max_height * 0.9:
                 break
             font_size += 1
-        font.setPointSize(font_size)
-        label_widget.setFont(font)
+
+        # Apply the final font size to all labels
+        for label in labels:
+            font = label.font()
+            font.setPointSize(font_size)
+            label.setFont(font)
 
     def initUI(self) -> None:
         """Initialize the main UI window"""
@@ -202,7 +269,6 @@ class ReactionGame(PySide6.QtWidgets.QMainWindow):
 
         # Remove default margins from top and bottom
         top_layout.setContentsMargins(10, 0, 10, 0)
-        top_layout.addStretch(1)  # Pushes the label to the right
 
         self.best_time_label = PySide6.QtWidgets.QLabel()
         self.best_time_label.setStyleSheet(
@@ -212,14 +278,7 @@ class ReactionGame(PySide6.QtWidgets.QMainWindow):
         self.best_time_label.setAlignment(
             PySide6.QtCore.Qt.AlignmentFlag.AlignRight
             | PySide6.QtCore.Qt.AlignmentFlag.AlignVCenter
-        )  # Use bitwise OR to combine alignment flags
-
-        # Let the label expand horizontally within the layout
-        self.best_time_label.setSizePolicy(
-            PySide6.QtWidgets.QSizePolicy.Policy.MinimumExpanding,
-            PySide6.QtWidgets.QSizePolicy.Policy.Preferred,
         )
-
         top_layout.addWidget(self.best_time_label)
 
         self.top_bar.hide()
@@ -236,7 +295,9 @@ class ReactionGame(PySide6.QtWidgets.QMainWindow):
         trophy_path = resource_path("trophy.svg")
         self.trophy = PySide6.QtSvgWidgets.QSvgWidget(trophy_path)
         self.trophy.hide()
-        # An individual widget has no opacity property, so we add a controlable effect on top of it
+
+        # An individual widget has no opacity property
+        # So we add a controllable effect on top of it
         self.trophy_opacity_effect = PySide6.QtWidgets.QGraphicsOpacityEffect(
             self.trophy
         )
@@ -247,12 +308,8 @@ class ReactionGame(PySide6.QtWidgets.QMainWindow):
         )
 
         # --- Widget 2: Instruction Box ---
-        # No parent needed because we're adding to layout
+        # No parent argument needed because we're adding to layout
         self.instruction_box = PySide6.QtWidgets.QLabel()
-        self.instruction_box.setSizePolicy(
-            PySide6.QtWidgets.QSizePolicy.Policy.Expanding,
-            PySide6.QtWidgets.QSizePolicy.Policy.Expanding,
-        )
 
         # Add a shadow effect to the instruction box for a little flair
         shadow = PySide6.QtWidgets.QGraphicsDropShadowEffect()
@@ -304,11 +361,6 @@ class ReactionGame(PySide6.QtWidgets.QMainWindow):
         # --- Widget 3: Space Indicator ---
         # Create WITHOUT central_widget parent
         self.space_indicator = PySide6.QtWidgets.QLabel("SPACE")
-        # Let layout handle size, set preferred size via font/content
-        self.space_indicator.setSizePolicy(
-            PySide6.QtWidgets.QSizePolicy.Policy.Preferred,  # Width preferred based on content
-            PySide6.QtWidgets.QSizePolicy.Policy.Preferred,  # Height preferred based on content
-        )
 
         # Add shadow effect to the space button
         button_shadow = PySide6.QtWidgets.QGraphicsDropShadowEffect()
@@ -332,9 +384,9 @@ class ReactionGame(PySide6.QtWidgets.QMainWindow):
         self.game_state = GameState.READY
         self.best_time = float("inf")
         self.start_time = 0.0
-        self.reaction_time: float = 0.0
-        self.wait_start_time: float = 0.0
-        self.random_wait_time: float = 0.0
+        self.reaction_time = 0.0
+        self.wait_start_time = 0.0
+        self.random_wait_time = 0.0
         self.wait_timer = PySide6.QtCore.QTimer()
         self.wait_timer.timeout.connect(self.check_wait_time)
         self.trophy_animation_group = None
@@ -346,7 +398,7 @@ class ReactionGame(PySide6.QtWidgets.QMainWindow):
         layout: PySide6.QtWidgets.QVBoxLayout = self.centralWidget().layout()
         top_layout: PySide6.QtWidgets.QHBoxLayout = self.top_bar.layout()
 
-        # --- Top Bar --
+        # --- Top Bar ---
         # The bar itself
         self.top_bar.setFixedHeight(int(window_height * TOP_BAR_HEIGHT))
         # The best time label container
@@ -415,10 +467,6 @@ class ReactionGame(PySide6.QtWidgets.QMainWindow):
         ):
             self.animate_trophy()  # Handles both stopping and starting
 
-        # This resizeEvent function overrides the existing method, so we add a call to the
-        # parent implementation at the end
-        super().resizeEvent(event)
-
     def animate_trophy(self) -> None:
         """Animated trophy appearance (It's the little things that make a difference)"""
         # --- Prepare ---
@@ -437,13 +485,11 @@ class ReactionGame(PySide6.QtWidgets.QMainWindow):
         )
 
         # --- Calculate Size ---
-        top_bar_height: int = (
-            self.top_bar.height() if self.top_bar.isVisible() else 0
-        )
-        # The top bar *should* be visible, but check anyway for future proofing
+        top_bar_height: int = self.top_bar.height() if self.top_bar.isVisible() else 0
+        # The top bar should be visible, but check anyway in case logic updates
         instruction_box_y: int = self.instruction_box.y()
         available_height: int = instruction_box_y - top_bar_height
-        padding_factor: float = 1.0 - TROPHY_PADDING
+        padding_factor: float = 1.0 - TROPHY_PADDING * 2.0
         max_height: int = int(available_height * padding_factor)
         max_width: int = int(self.width() * padding_factor)
 
@@ -457,10 +503,9 @@ class ReactionGame(PySide6.QtWidgets.QMainWindow):
         grow_animation.setStartValue(PySide6.QtCore.QSize(0, 0))
         grow_animation.setEndValue(PySide6.QtCore.QSize(target_size, target_size))
         grow_animation.setEasingCurve(PySide6.QtCore.QEasingCurve.Type.OutCubic)
-
         animation_sequence.addAnimation(grow_animation)
 
-        # Create a parallel group for fade and shrink so that they can run simultaneously
+        # Create a parallel group for fade and shrink so that they run simultaneously
         shrink_fade_group: PySide6.QtCore.QParallelAnimationGroup = (
             PySide6.QtCore.QParallelAnimationGroup()
         )
@@ -468,6 +513,9 @@ class ReactionGame(PySide6.QtWidgets.QMainWindow):
         # Shrink
         shrink_animation: PySide6.QtCore.QPropertyAnimation = (
             PySide6.QtCore.QPropertyAnimation(self.trophy, b"minimumSize")
+            # We animate *minimum* instead of *maximum*
+            # Because the layout stretches clamp the trophy down to minimum
+            # effectively making the minimum size the actual size
         )
         shrink_animation.setDuration(TROPHY_DURATION // 2)
         shrink_animation.setStartValue(PySide6.QtCore.QSize(target_size, target_size))
@@ -475,10 +523,10 @@ class ReactionGame(PySide6.QtWidgets.QMainWindow):
         shrink_animation.setEasingCurve(PySide6.QtCore.QEasingCurve.Type.InCubic)
 
         # Fade
+
+        # Get the opacity effect from earlier
         fade_animation: PySide6.QtCore.QPropertyAnimation = (
-            PySide6.QtCore.QPropertyAnimation(
-                self.trophy_opacity_effect, b"opacity"
-            )
+            PySide6.QtCore.QPropertyAnimation(self.trophy_opacity_effect, b"opacity")
         )
         fade_animation.setDuration(TROPHY_DURATION // 2)
         fade_animation.setStartValue(1.0)
@@ -500,41 +548,39 @@ class ReactionGame(PySide6.QtWidgets.QMainWindow):
         self.trophy_animation_group.start()
 
     def keyPressEvent(self, event: PySide6.QtGui.QKeyEvent) -> None:
-        """Handle keyboard events"""
-        # Ignore auto-repeat events from holding the key down
+        """Handle space bar press"""
         if event.key() == PySide6.QtCore.Qt.Key.Key_Space and not event.isAutoRepeat():
             self.space_indicator.setProperty("pressed", True)
-            # Force style update
+            # Changes don't take effect unless we unpolish and repolish
             self.space_indicator.style().unpolish(self.space_indicator)
             self.space_indicator.style().polish(self.space_indicator)
 
-            self.handle_space_press()
+            if self.game_state == GameState.READY:
+                self.instruction_box.setProperty("game_state", "waiting")
+                self.start_waiting()
+            elif self.game_state == GameState.WAITING:
+                self.instruction_box.setProperty("game_state", "too_early")
+                self.too_early()
+            elif self.game_state == GameState.REACT:
+                self.instruction_box.setProperty("game_state", "result")
+                self.show_result()
+            elif self.game_state in [GameState.RESULT, GameState.TOO_EARLY]:
+                self.instruction_box.setProperty("game_state", "waiting")
+                self.start_waiting()
+
+        # Update font size for game-state-related textual changes
+        self._update_font_size(self.instruction_box)
+
+        # Font updates automatically, but force-apply style changes like color
+        self.instruction_box.style().unpolish(self.instruction_box)
+        self.instruction_box.style().polish(self.instruction_box)
 
     def keyReleaseEvent(self, event: PySide6.QtGui.QKeyEvent) -> None:
-        """Handle keyboard release events"""
+        """Handle space bar release"""
         if event.key() == PySide6.QtCore.Qt.Key.Key_Space:
             self.space_indicator.setProperty("pressed", False)
             self.space_indicator.style().unpolish(self.space_indicator)
             self.space_indicator.style().polish(self.space_indicator)
-
-    def handle_space_press(self) -> None:
-        """Handle space bar press based on game state"""
-        if self.game_state == GameState.READY:
-            self.instruction_box.setProperty("game_state", "waiting")
-            self.start_waiting()
-        elif self.game_state == GameState.WAITING:
-            self.instruction_box.setProperty("game_state", "too_early")
-            self.too_early()
-        elif self.game_state == GameState.REACT:
-            self.instruction_box.setProperty("game_state", "result")
-            self.show_result()
-        elif self.game_state in [GameState.RESULT, GameState.TOO_EARLY]:
-            self.instruction_box.setProperty("game_state", "waiting")
-            self.start_waiting()
-        # Update font size after game state text update
-        self._update_font_size(self.instruction_box)
-        self.instruction_box.style().unpolish(self.instruction_box)
-        self.instruction_box.style().polish(self.instruction_box)
 
     def start_waiting(self) -> None:
         """Start the waiting period"""
@@ -544,10 +590,22 @@ class ReactionGame(PySide6.QtWidgets.QMainWindow):
         self.instruction_box.setText("Wait for it...")
         self.wait_timer.start(10)  # Check every 10ms
 
+    def check_wait_time(self) -> None:
+        """Check if waiting period is over"""
+        if time.time() - self.wait_start_time >= self.random_wait_time:
+            self.wait_timer.stop()
+            self.game_state = GameState.REACT
+            self.start_time = time.time()
+            self.instruction_box.setText("GO!!!")
+            self.instruction_box.setProperty("game_state", "react")
+            self._update_font_size(self.instruction_box)
+            self.instruction_box.style().unpolish(self.instruction_box)
+            self.instruction_box.style().polish(self.instruction_box)
+
     def too_early(self) -> None:
         """Handle early button press"""
-        self.game_state = GameState.TOO_EARLY
         self.wait_timer.stop()
+        self.game_state = GameState.TOO_EARLY
         self.instruction_box.setText("Too eager! Try again.\nPress SPACE to continue")
 
         # Shake animation to provide visual feedback for error
@@ -572,7 +630,7 @@ class ReactionGame(PySide6.QtWidgets.QMainWindow):
         self.reaction_time = time.time() - self.start_time
         if self.reaction_time < self.best_time:
             self.best_time = self.reaction_time
-            self.best_time_label.setText(f"BEST: {self.best_time:.3f} s")
+            self.best_time_label.setText(f"BEST: {self.best_time:.3f} secs")
             if not self.top_bar.isVisible():
                 # Recalculate 2nd stretch factor since top bar is now taking up space
                 layout = self.centralWidget().layout()
@@ -582,6 +640,7 @@ class ReactionGame(PySide6.QtWidgets.QMainWindow):
                 layout.setStretch(1, new_stretch)
                 self.top_bar.show()
             self.animate_trophy()
+
         if self.reaction_time < 0.05:
             # Little easter egg
             result_text = f"WOW, {self.reaction_time:.3f} seconds!\nAre you a bot?! Press SPACE to try again..."
@@ -594,19 +653,6 @@ class ReactionGame(PySide6.QtWidgets.QMainWindow):
         self.instruction_box.setText(result_text)
         # Trigger resize event due to textual content change
         self.resizeEvent(None)
-
-    def check_wait_time(self) -> None:
-        """Check if waiting period is over"""
-        if time.time() - self.wait_start_time >= self.random_wait_time:
-            self.wait_timer.stop()
-            self.game_state = GameState.REACT
-            self.start_time = time.time()
-            self.instruction_box.setText("GO!!!")
-            self.instruction_box.setProperty("game_state", "react")
-            self._update_font_size(self.instruction_box)
-            # Changes don't take effect unless we unpolish and repolish
-            self.instruction_box.style().unpolish(self.instruction_box)
-            self.instruction_box.style().polish(self.instruction_box)
 
 
 # =============================================================================
@@ -621,6 +667,7 @@ def main() -> None:
     sys.exit(app.exec())
 
 
-# Allows my code to be imported as a module without inherently running the game, good practice
+# Allows my code to be imported as a module without inherently running the game
+# Good practice
 if __name__ == "__main__":
     main()

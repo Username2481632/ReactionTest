@@ -14,4 +14,4 @@ repos:
         entry: scripts/run_pytype.sh
         language: script
         types: [python]
-        pass_filenames: false 
+        pass_filenames: false
