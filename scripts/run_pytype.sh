@@ -16,8 +16,13 @@ python --version
 
 echo "Running pytype with Python 3.12 (strict mode, module-attr enabled)..."
 
-# Run pytype using config, but NO --disable=module-attr
-if pytype --config=pytype.cfg src/reaction_timer.py; then
+# Define stricter flags explicitly
+# Combine flags into a single string for clarity
+STRICT_FLAGS="--strict-import --protocols --strict-parameter-checks --strict-primitive-comparisons --strict-undefined-checks"
+
+# Run pytype using config for basic settings and explicit flags for strictness
+# Pass the source file explicitly again
+if pytype --config=pytype.cfg ${STRICT_FLAGS} src/reaction_timer.py; then
     echo "Pytype check completed successfully!"
     exit 0
 else
@@ -29,6 +34,6 @@ else
     echo ""
     echo "Attempting to fix the issues..."
     echo ""
-    # Exit with 0 to allow pre-commit to continue (change to 'exit 1' to block commits on errors)
-    exit 0
+    # Exit with non-zero code to indicate failure
+    exit 1
 fi 
