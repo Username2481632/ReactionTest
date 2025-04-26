@@ -669,10 +669,9 @@ class ReactionGame(PySide6.QtWidgets.QMainWindow):
 
         # Update average time label
         self.times_history.append(self.reaction_time)
-        if self.times_history:
-            self.average_time_label.setText(
-                f"AVERAGE: {statistics.median(self.times_history):.3f} secs"
-            )
+        self.average_time_label.setText(
+            f"AVERAGE: {statistics.median(self.times_history):.3f} secs"
+        )
 
         # Update best time label
         if self.reaction_time < self.best_time:
