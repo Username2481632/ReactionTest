@@ -7,6 +7,7 @@ a central button turns green and the player must click it as quickly as possible
 The program times their reaction and displays the result.
 """
 
+import statistics
 import sys
 import random
 import time
@@ -31,6 +32,8 @@ SPACE_INDICATOR_BOTTOM_MARGIN: float = 0.08  # vh
 SPACE_RADIUS: int = 10  # px
 TOP_BAR_HEIGHT: float = 0.10  # vh
 TROPHY_PADDING: float = 0.05  # max(vw, vh)
+BEST_SCORE_LETTER_SPACING: float = 0.1  # % of font size
+MIN_LABEL_SPACING: float = 0.05  # %
 
 # min(% of space indicator width, % of space indicator height)
 SPACE_BORDER: int = 5
@@ -124,6 +127,7 @@ class ReactionGame(PySide6.QtWidgets.QMainWindow):
     reaction_time: float
     wait_start_time: float
     random_wait_time: float
+    times_history: list[float]
 
     # UI elements
     instruction_box: PySide6.QtWidgets.QLabel
@@ -132,6 +136,11 @@ class ReactionGame(PySide6.QtWidgets.QMainWindow):
     best_time_label: PySide6.QtWidgets.QLabel
     trophy: PySide6.QtSvgWidgets.QSvgWidget
     trophy_animation_group: None | PySide6.QtCore.QSequentialAnimationGroup
+    average_time_label: PySide6.QtWidgets.QLabel
+
+    trophy_opacity_effect: PySide6.QtWidgets.QGraphicsOpacityEffect
+    # (Store explicitly to avoid ambiguity if more effects are added later)
+
 
     def __init__(self):
         # Initialize parent QMainWindow class - required for Qt functionality
@@ -270,11 +279,20 @@ class ReactionGame(PySide6.QtWidgets.QMainWindow):
         # Remove default margins from top and bottom
         top_layout.setContentsMargins(10, 0, 10, 0)
 
-        self.best_time_label = PySide6.QtWidgets.QLabel()
-        self.best_time_label.setStyleSheet(
-            f"color: {Colors.TOP_BAR_TEXT.name()}; font-weight: bold;"
-            # TODO: Add padding if needed: "padding-right: 5px;"
+        # Average time label (top-left)
+        self.average_time_label = PySide6.QtWidgets.QLabel()
+        self.average_time_label.setAlignment(
+            PySide6.QtCore.Qt.AlignmentFlag.AlignLeft
+            | PySide6.QtCore.Qt.AlignmentFlag.AlignVCenter
         )
+        top_layout.addWidget(self.average_time_label)
+
+        # Push labels apart
+        top_layout.addStretch(1)
+
+        # Best time label (top-right)
+        self.best_time_label = PySide6.QtWidgets.QLabel()
+        # stylesheet set in resizeEvent
         self.best_time_label.setAlignment(
             PySide6.QtCore.Qt.AlignmentFlag.AlignRight
             | PySide6.QtCore.Qt.AlignmentFlag.AlignVCenter
@@ -387,6 +405,7 @@ class ReactionGame(PySide6.QtWidgets.QMainWindow):
         self.reaction_time = 0.0
         self.wait_start_time = 0.0
         self.random_wait_time = 0.0
+        self.times_history = []
         self.wait_timer = PySide6.QtCore.QTimer()
         self.wait_timer.timeout.connect(self.check_wait_time)
         self.trophy_animation_group = None
@@ -401,22 +420,20 @@ class ReactionGame(PySide6.QtWidgets.QMainWindow):
         # --- Top Bar ---
         # The bar itself
         self.top_bar.setFixedHeight(int(window_height * TOP_BAR_HEIGHT))
-        # The best time label container
-        container_height = (
-            self.top_bar.height()
-            - top_layout.contentsMargins().top()
-            - top_layout.contentsMargins().bottom()
-        )
-        # Calculate available width: total width - margins - trophy width - spacing around stretch
-        available_width = (
-            self.top_bar.width()
-            - top_layout.contentsMargins().left()
-            - top_layout.contentsMargins().right()
-            - top_layout.spacing() * 2
-        )
-        self.best_time_label.setFixedSize(available_width, container_height)
-        # Finally update the font size
-        self._update_font_size(self.best_time_label)
+
+        # Font size and letter spacing form a circular dependency
+        # So we need to run them a few times for things to sort themselves out
+        for _ in range(3):
+            self._update_font_size(
+                self.average_time_label,
+                self.best_time_label,
+                min_spacing=MIN_LABEL_SPACING,
+            )
+            # Common style for top bar labels
+            label_style = f"color: {Colors.TOP_BAR_TEXT.name()}; font-weight: bold; letter-spacing: {self.best_time_label.font().pointSize() * BEST_SCORE_LETTER_SPACING}px;"
+            self.average_time_label.setStyleSheet(label_style)
+
+            self.best_time_label.setStyleSheet(label_style)
 
         # Layout might have adjusted sizes slightly, so throughout this function
         # we use measured values rather than the calculated ones
@@ -628,6 +645,15 @@ class ReactionGame(PySide6.QtWidgets.QMainWindow):
     def show_result(self) -> None:
         """Show reaction time result"""
         self.reaction_time = time.time() - self.start_time
+
+        # Update average time label
+        self.times_history.append(self.reaction_time)
+        if self.times_history:
+            self.average_time_label.setText(
+                f"AVERAGE: {statistics.median(self.times_history):.3f} secs"
+            )
+
+        # Update best time label
         if self.reaction_time < self.best_time:
             self.best_time = self.reaction_time
             self.best_time_label.setText(f"BEST: {self.best_time:.3f} secs")
