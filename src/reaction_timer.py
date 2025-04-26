@@ -45,6 +45,9 @@ STRETCH_PRECISION: int = 3
 # ms for which the trophy is shown
 TROPHY_DURATION: int = 1000  # ms
 
+SHAKE_DISTANCE: float = 0.025  # vw
+SHAKE_DURATION: int = 400  # ms
+
 
 # --- Centralized Color Scheme ---
 def hsl(h: int, s: int, l: int) -> PySide6.QtGui.QColor:
@@ -141,6 +144,7 @@ class ReactionGame(PySide6.QtWidgets.QMainWindow):
     trophy_opacity_effect: PySide6.QtWidgets.QGraphicsOpacityEffect
     # (Store explicitly to avoid ambiguity if more effects are added later)
 
+    shake_animation: PySide6.QtCore.QPropertyAnimation | None
 
     def __init__(self):
         # Initialize parent QMainWindow class - required for Qt functionality
@@ -409,6 +413,7 @@ class ReactionGame(PySide6.QtWidgets.QMainWindow):
         self.wait_timer = PySide6.QtCore.QTimer()
         self.wait_timer.timeout.connect(self.check_wait_time)
         self.trophy_animation_group = None
+        self.shake_animation = None
 
     def resizeEvent(self, event: PySide6.QtGui.QResizeEvent) -> None:
         """Handle window resize events to maintain proportional sizing"""
@@ -625,22 +630,38 @@ class ReactionGame(PySide6.QtWidgets.QMainWindow):
         self.game_state = GameState.TOO_EARLY
         self.instruction_box.setText("Too eager! Try again.\nPress SPACE to continue")
 
+        # Stop any old animations in case the user presses space really quickly
+        if self.shake_animation is not None:
+            self.shake_animation.targetObject().setGeometry(
+                self.shake_animation.endValue()
+            )
+
         # Shake animation to provide visual feedback for error
-        animation: PySide6.QtCore.QPropertyAnimation = (
-            PySide6.QtCore.QPropertyAnimation(self.instruction_box, b"pos")
+        self.shake_animation = PySide6.QtCore.QPropertyAnimation(
+            self.instruction_box, b"geometry"
         )
-        animation.setDuration(200)
-        start_pos: PySide6.QtCore.QPoint = self.instruction_box.pos()
+        self.shake_animation.setDuration(SHAKE_DURATION)
+        initial_geometry: PySide6.QtCore.QRect = self.instruction_box.geometry()
+        shake_offset = self.instruction_box.width() * SHAKE_DISTANCE
 
-        # Create keyframes for shake effect
-        animation.setKeyValueAt(0, start_pos)
-        animation.setKeyValueAt(0.2, start_pos + PySide6.QtCore.QPoint(5, 0))
-        animation.setKeyValueAt(0.4, start_pos + PySide6.QtCore.QPoint(-5, 0))
-        animation.setKeyValueAt(0.6, start_pos + PySide6.QtCore.QPoint(3, 0))
-        animation.setKeyValueAt(0.8, start_pos + PySide6.QtCore.QPoint(-3, 0))
-        animation.setKeyValueAt(1, start_pos)
+        # Make a simple keyframe animation
+        self.shake_animation.setKeyValueAt(0, initial_geometry)
+        self.shake_animation.setKeyValueAt(
+            0.2, initial_geometry.translated(shake_offset, 0)
+        )
+        self.shake_animation.setKeyValueAt(
+            0.4, initial_geometry.translated(-shake_offset, 0)
+        )
+        self.shake_animation.setKeyValueAt(
+            0.6, initial_geometry.translated(shake_offset // 2, 0)
+        )
+        self.shake_animation.setKeyValueAt(
+            0.8, initial_geometry.translated(-shake_offset // 2, 0)
+        )
+        self.shake_animation.setKeyValueAt(1, initial_geometry)
 
-        animation.start()
+        # Begin the animation
+        self.shake_animation.start()
 
     def show_result(self) -> None:
         """Show reaction time result"""
